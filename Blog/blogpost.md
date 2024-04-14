@@ -3,13 +3,18 @@ We present our efforts to reproduce [Tokuoka et al.](https://www.nature.com/arti
 ### Goal
 The purpose of our research was to reproduce Figure 3 from the paper where the authors show direct results of the QCANet and compare it to the ground truth, 3D U-Net, and QCANet w/o NDN, aiming for the completion of our objective. To prioritize focus areas, we decided to leave out the 3D Mask R-CNN comparison.
 
-<span id="#fig3"></span>
-![Figure 3](figure3.png "Figure 3: Comparison of QCANet, ground truth, 3D U-Net, and QCANet w/o NDN")
-### QCANet Overview
-Before we explore our reproducibility efforts, let us first explain the concept behind QCANet. This system employs two interconnected subnetworks: the Nuclear Segmentation Network (NSN) and the Nuclear Detection Network (NDN). The NSN is designed to distinguish cells from the background, whereas the NDN identifies individual cells within clusters. This dual approach enables instance segmentation, where each cell is individually labeled rather than being simply classified as "cell" (refer to Figure 2). The addition of the NDN significantly enhances the traditional 3D U-Net architecture predominantly utilized by the NSN. The NSN uses stochastic gradient descent for optimization, and the NDN utilizes the Adam algorithm. Both networks process 3D microscopic data and are combined in a post-processing step, where the NSN serves as a mask to apply watershed techniques to the NDN outputs, as illustrated in the last column of Figure 3. 
+<p align="center">
+  <img src="figure3.png" />
+</p>  
 
-![Instance_segmentation](instance_segmentation.png "")  
-*Diagram taken from the QCANet paper explaining the difference between semantic and instance segmentation.*
+### QCANet Overview
+Before we explore our reproducibility efforts, let us first explain the concept behind QCANet. This system employs two interconnected subnetworks: the Nuclear Segmentation Network (NSN) and the Nuclear Detection Network (NDN). The NSN is designed to distinguish cells from the background, whereas the NDN identifies individual cells within clusters. This dual approach enables instance segmentation, where each cell is individually labeled rather than being simply classified as "cell" (see diagram below). The addition of the NDN significantly enhances the traditional 3D U-Net architecture predominantly utilized by the NSN. The NSN uses stochastic gradient descent for optimization, and the NDN utilizes the Adam algorithm. Both networks process 3D microscopic data and are combined in a post-processing step, where the NSN serves as a mask to apply watershed techniques to the NDN outputs, as illustrated in the last column of Figure 3. 
+
+<p align="center">
+  <img src="instance_segmentation.png" />
+</p>  
+
+*Diagram taken from [Tokuoka et al.](https://www.nature.com/articles/s41540-020-00152-8) explaining the difference between semantic and instance segmentation.*
 
 ---
 # Approach
@@ -23,9 +28,8 @@ We encountered substantial obstacles in training new QCANet models, including ou
 ### 3.	Evaluating hyperparameter sensitivity
 We shifted our investigation of hyperparameter sensitivity in QCANet models to a PyTorch-based framework, leveraging [Optuna](https://optuna.org/) for systematic optimization, with a primary focus on exploring variations in learning rate. The outcomes of these evaluations are documented in our [GitHub repository](https://github.com/filipxg/DL-Reproducibility). We discovered that a very low learning rate was most effective across the models tested. Initially, we chose to adjust only the learning rate for simplicity, allowing easy modification of other parameters like batch size or epochs later on. Our use of Optuna required extensive Kaggle resources and time. However, following the methodology of [Tokuoka et al.](https://www.nature.com/articles/s41540-020-00152-8), who utilized 150 epochs per model, we adopted the same approach rather than optimizing for an ideal number of epochs. Constraints on memory limited us to a batch size of 1, as using larger batches would exceed the available memory on Kaggle's GPUs.
 ### 4.	Reproduction of the 3D U-Net results
-As our initial goal was to reproduce Figure 3 from their paper, we lastly also took a look at the 3D U-Net implementation. By implementing this network as well, we could compare the results and see if QCANet indeed outperformed 3D U-Net. The authors themselves did not provide any code for 3D-UNet, but we took [3D-Unet](https://github.com/wolny/pytorch-3dunet) as a baseline to implement this network. We set up this model in Kaggle. Our DiceLoss was used as loss function and IoU as an accuracy metric. For the hyperparameters, everything that was stated in the paper and references was used and missing parameters were estimated using Bayesian estimation with Optuna. The model successfully converged and achieved good IoU’s. However, the results looked nothing like we would expect (see figure ##). We were not able to deduct what went wrong, and therefore excluded these results from our final results. Our efforts can be found in `3dunet.ipynb` on our [Github](https://github.com/filipxg/DL-Reproducibility).  
-  
-\~Figure with 3D U-Net results?~
+As our initial goal was to reproduce Figure 3 from their paper, we lastly also took a look at the 3D U-Net implementation. By implementing this network as well, we could compare the results and see if QCANet indeed outperformed 3D U-Net. The authors themselves did not provide any code for 3D-UNet, but we took [3D-Unet](https://github.com/wolny/pytorch-3dunet) as a baseline to implement this network. We set up this model in Kaggle. Our DiceLoss was used as loss function and IoU as an accuracy metric. For the hyperparameters, everything that was stated in the paper and references was used and missing parameters were estimated using Bayesian estimation with Optuna. The model successfully converged and achieved good IoU’s. However, the results looked nothing like we would expect. We were not able to deduct what went wrong, and therefore excluded these results from our final results. Our efforts can be found in `3dunet.ipynb` on our [Github](https://github.com/filipxg/DL-Reproducibility).  
+
 ## Loss Function
 We encountered issues with the dice loss function provided by the utilized library, which returned negative values. To resolve this, we derived the dice coefficient loss directly from the formulation provided in the referenced [paper](https://arxiv.org/pdf/1606.04797.pdf):
 
@@ -35,7 +39,7 @@ This equation calculates the dice coefficient, \(D\), where \(N\) is the total n
 
 ---
 # Results
-\~FINAL FIGURE~  
+![Final Results](final_results.png "a title")  
 We managed to partially replicate Figure 3, which showcased 3D fluorescence microscopic images, the ground truth, QCANet without NDN, and the full QCANet implementation, as depicted in the figure above. Notably, the addition of NDN significantly enhanced the network's performance; the NSN alone tended to assign a single label to touching nuclei. The NDN facilitated the separation of these nuclei, a benefit that became increasingly evident in samples with higher nuclei counts, where the likelihood of overlap escalates.
 
 Furthermore, we conducted an ablation study on the NSN model. Our modifications included replacing the ReLU activation function with a Sigmoid and disconnecting the pathways between the convolutional and deconvolutional layers. The results, illustrated in the graphs below, indicate that the Sigmoid activation markedly underperformed relative to the ReLU. Conversely, removing the inter-layer connections did not severely impact the network's initial training phase over 10 epochs, though further analysis is required to fully assess the significance of these connections.
